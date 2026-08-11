@@ -1,0 +1,247 @@
+import 'package:flutter/material.dart';
+
+import 'package:get/get.dart';
+
+import 'package:http/http.dart' as http;
+
+import 'package:image_picker/image_picker.dart';
+
+import 'dart:io'; // এটি যোগ করতে ভুলবেন না
+
+// ... (কন্ট্রোলারের আগের কোডগুলো)
+
+class AutomationController extends GetxController {
+  // ইনপুট কন্ট্রোলারসমূহ
+
+  final aiPromptController = TextEditingController();
+
+  final manualPromptController = TextEditingController();
+
+  final schedulePromptController =
+      TextEditingController(); // শিডিউলের জন্য প্রম্পট বা বিবরণ
+
+  // ট্যাব ইনডেক্স: 0 = AI Agent, 1 = Manual Post, 2 = Schedule Mode
+
+  var selectedTab = 0.obs;
+
+  var isLoading = false.obs;
+
+  var selectAll = false.obs;
+
+  // প্ল্যাটফর্ম সিলেকশন স্টেট
+
+  var postToFacebook = true.obs;
+
+  var postToInstagram = false.obs;
+
+  var postToPinterest = false.obs;
+
+  // শিডিউল ও ইমেজ সম্পর্কিত স্টেট
+
+  var scheduleTime = TimeOfDay.now().obs;
+
+  var uploadedImages = <String>[].obs; // মাল্টিপল ইমেজ লিস্ট
+
+  void toggleSelectAll(bool val) {
+    selectAll.value = val;
+
+    postToFacebook.value = val;
+
+    postToInstagram.value = val;
+
+    postToPinterest.value = val;
+  }
+
+  // টাইম সিলেক্ট করার ফাংশন (Schedule এর জন্য)
+
+  Future<void> pickScheduleTime(BuildContext context) async {
+    TimeOfDay? picked = await showTimePicker(
+      context: context,
+
+      initialTime: scheduleTime.value,
+    );
+
+    if (picked != null) {
+      scheduleTime.value = picked;
+    }
+  }
+
+  // গ্যালারি থেকে মাল্টিপল ইমেজ সিলেক্ট করার ফাংশন
+
+  // গ্যালারি থেকে মাল্টিপল ইমেজ সিলেক্ট করার রিয়েল ফাংশন
+
+  void pickMultipleImages() async {
+    final ImagePicker picker = ImagePicker();
+
+    try {
+      final List<XFile> images = await picker.pickMultiImage();
+
+      if (images.isNotEmpty) {
+        uploadedImages.addAll(images.map((e) => e.path));
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+
+        'ছবি সিলেক্ট করতে সমস্যা হয়েছে: $e',
+
+        backgroundColor: Colors.red,
+
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // আপলোড করা ছবি ডিলিট করার ফাংশন
+
+  void removeImage(int index) {
+    uploadedImages.removeAt(index);
+  }
+
+  // Gemini Chat AI দিয়ে ম্যানুয়াল বক্সে সাহায্য নেওয়ার ফাংশন (ঐচ্ছিক ফিচার)
+
+  void askGeminiForHelp() async {
+    String query = manualPromptController.text.trim();
+
+    if (query.isEmpty) {
+      Get.snackbar(
+        'Error',
+
+        'দয়া করে কিছু লিখে তারপর জেমিনি এজেন্টের সাহায্য নিন!',
+
+        backgroundColor: Colors.red,
+
+        colorText: Colors.white,
+
+        snackPosition: SnackPosition.BOTTOM,
+      );
+
+      return;
+    }
+
+    // TODO [API Integration]: এখানে জেমিনি এপিআই কল করে টেক্সট জেনারেট করে ম্যানুয়াল বক্সে বসাতে হবে।
+
+    manualPromptController.text =
+        "✨ [Gemini AI Generated]: $query সম্পর্কিত আকর্ষণীয় ক্যাপশন...";
+  }
+
+  // ব্যাকএন্ড এবং n8n-এ ডাটা সাবমিট করার মূল ফাংশন
+
+  void submitData() async {
+    try {
+      isLoading.value = true;
+
+      // কোন ট্যাব সিলেক্ট করা আছে তার ওপর ভিত্তি করে মোড নির্ধারণ
+
+      String mode = 'manual';
+
+      String promptText = '';
+
+      if (selectedTab.value == 0) {
+        mode = 'ai_agent';
+
+        promptText = aiPromptController.text;
+      } else if (selectedTab.value == 1) {
+        mode = 'manual';
+
+        promptText = manualPromptController.text;
+      } else {
+        mode = 'schedule';
+
+        promptText = schedulePromptController.text;
+      }
+
+      // মাল্টিপার্ট রিকোয়েস্ট তৈরি
+
+      var request = http.MultipartRequest(
+        'POST',
+
+        Uri.parse('https://social-backend-1hwz.onrender.com/api/save-post'),
+      );
+
+      // টেক্সট ফিল্ডগুলো যোগ করা
+
+      request.fields['user_id'] = '1';
+
+      request.fields['mode'] = mode;
+
+      request.fields['content'] = promptText;
+
+      request.fields['facebook'] = postToFacebook.value.toString();
+
+      request.fields['instagram'] = postToInstagram.value.toString();
+
+      request.fields['pinterest'] = postToPinterest.value.toString();
+
+      if (selectedTab.value == 2) {
+        request.fields['schedule_time'] = scheduleTime.value.format(
+          Get.context!,
+        );
+      }
+
+      // ইমেজ ফাইলগুলো যোগ করা
+
+      for (var path in uploadedImages) {
+        var file = File(path);
+
+        var multipartFile = await http.MultipartFile.fromPath(
+          'images',
+
+          file.path,
+        );
+
+        request.files.add(multipartFile);
+      }
+
+      // সার্ভারে পাঠানো
+
+      var streamedResponse = await request.send();
+
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        Get.snackbar(
+          "Success",
+
+          "ছবি ও কন্টেন্ট সফলভাবে আপলোড হয়েছে!",
+
+          backgroundColor: Colors.green,
+
+          colorText: Colors.white,
+        );
+
+        // ফর্ম ক্লিয়ার করা
+
+        aiPromptController.clear();
+
+        manualPromptController.clear();
+
+        schedulePromptController.clear();
+
+        uploadedImages.clear();
+      } else {
+        Get.snackbar(
+          "Error",
+
+          "সার্ভার এরর: ${response.statusCode}",
+
+          backgroundColor: Colors.red,
+
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+
+        "ফাইল পাঠাতে সমস্যা হয়েছে: $e",
+
+        backgroundColor: Colors.red,
+
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+}
