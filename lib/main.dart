@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:social_media_automation/controllers/auth_controller.dart';
 import 'views/auth_view.dart';
 import 'views/home_view.dart';
 
 void main() async {
   // ফ্লাটার বাইন্ডিং ইনিশিয়ালাইজ করা বাধ্যতামূলক
   WidgetsFlutterBinding.ensureInitialized();
+  Get.put(AuthController(), permanent: true);
 
   // চেক করা ইউজার আগে থেকেই লগইন করা আছে কি না (Persistent Login)
   final prefs = await SharedPreferences.getInstance();
