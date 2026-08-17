@@ -3,10 +3,9 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'auth_controller.dart'; // 👈 AuthController ইম্পোর্ট
+import 'auth_controller.dart';
 
 class AutomationController extends GetxController {
-  // ইনপুট কন্ট্রোলারে বাকি বিষয় অপরিবর্তিত...
   final aiPromptController = TextEditingController();
   final manualPromptController = TextEditingController();
   final schedulePromptController = TextEditingController();
@@ -19,8 +18,9 @@ class AutomationController extends GetxController {
   var postToInstagram = false.obs;
   var postToPinterest = false.obs;
 
-  var scheduleTime = TimeOfDay.now().obs;
   var uploadedImages = <String>[].obs;
+  var selectedTemplateIndex = (-1).obs;
+  var selectedTime = Rxn<TimeOfDay>();
 
   void toggleSelectAll(bool val) {
     selectAll.value = val;
@@ -29,15 +29,9 @@ class AutomationController extends GetxController {
     postToPinterest.value = val;
   }
 
-  Future<void> pickScheduleTime(BuildContext context) async {
-    TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: scheduleTime.value,
-    );
-
-    if (picked != null) {
-      scheduleTime.value = picked;
-    }
+  void applyQuickTemplate(String text) {
+    schedulePromptController.text = text;
+    selectedTemplateIndex.value = -1;
   }
 
   void pickMultipleImages() async {
@@ -81,16 +75,23 @@ class AutomationController extends GetxController {
         "✨ [Gemini AI Generated]: $query সম্পর্কিত আকর্ষণীয় ক্যাপশন...";
   }
 
-  // ব্যাকএন্ড এবং n8n-এ ডাটা সাবমিট করার মূল ফাংশন (JWT সিকিউরড)
   void submitData() async {
     try {
+      if (selectedTab.value == 2 && selectedTime.value == null) {
+        Get.snackbar(
+          'Error',
+          'দয়া করে শিডিউল পোস্টের জন্য টাইম সিলেক্ট করুন!',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
       isLoading.value = true;
 
-      // 🛡️ AuthController থেকে JWT টোকেন নেওয়া
       final AuthController authController = Get.find<AuthController>();
       String token = authController.token.value;
 
-      // কোন ট্যাব সিলেক্ট করা আছে তার ওপর ভিত্তি করে মোড নির্ধারণ
       String mode = 'manual';
       String promptText = '';
 
@@ -105,57 +106,64 @@ class AutomationController extends GetxController {
         promptText = schedulePromptController.text;
       }
 
-      // মাল্টিপার্ট রিকোয়েস্ট তৈরি
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('https://social-backend-1hwz.onrender.com/api/save-post'),
       );
 
-      // 🛡️ হেডারে JWT টোকেন যুক্ত করা (হার্ডকোডেড user_id বাদ দেওয়া হয়েছে)
       request.headers['Authorization'] = 'Bearer $token';
 
-      // টেক্সট ফিল্ডগুলো যোগ করা
       request.fields['mode'] = mode;
       request.fields['content'] = promptText;
       request.fields['facebook'] = postToFacebook.value.toString();
       request.fields['instagram'] = postToInstagram.value.toString();
       request.fields['pinterest'] = postToPinterest.value.toString();
 
-      if (selectedTab.value == 2) {
-        request.fields['schedule_time'] = scheduleTime.value.format(
-          Get.context!,
+      // শিডিউল মোডে সঠিক ISO DateTime ফরম্যাট হিসাব করে পাঠানো
+      if (selectedTab.value == 2 && selectedTime.value != null) {
+        DateTime now = DateTime.now();
+        DateTime scheduleDateTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          selectedTime.value!.hour,
+          selectedTime.value!.minute,
         );
+
+        if (scheduleDateTime.isBefore(now)) {
+          scheduleDateTime = scheduleDateTime.add(const Duration(days: 1));
+        }
+
+        request.fields['schedule_time'] = scheduleDateTime.toIso8601String();
       }
 
-      // ইমেজ ফাইলগুলো যোগ করা
       for (var path in uploadedImages) {
         var file = File(path);
-
         var multipartFile = await http.MultipartFile.fromPath(
           'images',
           file.path,
         );
-
         request.files.add(multipartFile);
       }
 
-      // সার্ভারে পাঠানো
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         Get.snackbar(
           "Success",
-          "ছবি ও কন্টেন্ট সফলভাবে আপলোড হয়েছে!",
+          selectedTab.value == 2
+              ? "পরপর ${uploadedImages.length > 0 ? uploadedImages.length : 1} দিনের পোস্ট সফলভাবে শিডিউল হয়েছে!"
+              : "পোস্ট সফলভাবে তৈরি হয়েছে!",
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
 
-        // ফর্ম ক্লিয়ার করা
         aiPromptController.clear();
         manualPromptController.clear();
         schedulePromptController.clear();
         uploadedImages.clear();
+        selectedTime.value = null;
       } else {
         Get.snackbar(
           "Error",

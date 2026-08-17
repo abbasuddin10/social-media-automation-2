@@ -17,7 +17,7 @@
     </queries>
 
     <application
-        android:label="social_media_automation"
+        android:label="Afraz Automation"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
