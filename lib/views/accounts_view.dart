@@ -2,12 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_media_automation/controllers/auth_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// 📂 কাস্টম ফাইল ইম্পোর্ট
+import 'package:social_media_automation/constants/app_colors.dart';
+import 'package:social_media_automation/widgets/smart_button.dart';
+
 class AccountsViewController extends GetxController
     with WidgetsBindingObserver {
-  // সোশ্যাল মিডিয়াগুলোর কানেকশন স্ট্যাটাস (.obs)
+  // সোশ্যাল মিডিয়াগুলোর কানেকশন স্ট্যাটাস
   var isFacebookConnected = false.obs;
   var isInstagramConnected = false.obs;
   var isYoutubeConnected = false.obs;
@@ -16,10 +21,12 @@ class AccountsViewController extends GetxController
   var isLinkedinConnected = false.obs;
   var isWhatsappConnected = false.obs;
 
+  // 🎯 ফেসবুক পেজের নাম ধরে রাখার জন্য ভ্যারিয়েবল
+  var facebookPageName = ''.obs;
+
   @override
   void onInit() {
     super.onInit();
-    // 📱 ইউজার ব্রাউজার থেকে অ্যাপে ব্যাক করলে স্বয়ংক্রিয় রিফ্রেশ ট্র্যাকিং শুরু
     WidgetsBinding.instance.addObserver(this);
     fetchConnectionStatus();
   }
@@ -30,7 +37,6 @@ class AccountsViewController extends GetxController
     super.onClose();
   }
 
-  // 🔄 ব্রাউজার থেকে অ্যাপে ফিরে আসলেই ব্যাকএন্ড চেক করবে
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -38,18 +44,31 @@ class AccountsViewController extends GetxController
     }
   }
 
-  // 🔐 সেফ পদ্ধতিতে AuthController থেকে UserId নেওয়ার হেলপার
+  // 🔐 সেফ পদ্ধতিতে UserId নেওয়ার হেলপার
   String _getUserId() {
     if (Get.isRegistered<AuthController>()) {
-      return Get.find<AuthController>().userId.value;
+      final controller = Get.find<AuthController>();
+      if (controller.userId.value.isNotEmpty) {
+        return controller.userId.value;
+      }
     }
     return '';
   }
 
-  // 🔄 ডাটাবেজ থেকে কানেকশন স্ট্যাটাস চেক করার ফাংশন
+  // 🔄 ডাটাবেজ থেকে কানেকশন স্ট্যাটাস ও পেজের নাম চেক করা
   Future<void> fetchConnectionStatus() async {
     try {
-      final userId = _getUserId();
+      var userId = _getUserId();
+
+      // র্যামে না থাকলে সরাসরি SharedPreferences থেকে লোড
+      if (userId.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        userId = prefs.getString('userId') ?? '';
+        if (Get.isRegistered<AuthController>()) {
+          Get.find<AuthController>().userId.value = userId;
+        }
+      }
+
       if (userId.isEmpty) return;
 
       final response = await http.get(
@@ -62,15 +81,21 @@ class AccountsViewController extends GetxController
         final data = json.decode(response.body);
         List<String> connectedPlatforms = [];
 
-        // ডাটাবেজ থেকে অ্যারে বা ম্যাপ যা-ই আসুক সেফ পার্সিং
+        facebookPageName.value = ''; // রিফ্রেশ করার সময় নাম রিসেট
+
         if (data is List) {
           for (var item in data) {
-            if (item is String) {
+            if (item is Map) {
+              String platform =
+                  item['platform']?.toString().toLowerCase().trim() ?? '';
+              connectedPlatforms.add(platform);
+
+              // 🎯 ফেসবুকের পেজের নাম পাওয়া গেলে আপডেট করা
+              if (platform == 'facebook' && item['page_name'] != null) {
+                facebookPageName.value = item['page_name'].toString();
+              }
+            } else if (item is String) {
               connectedPlatforms.add(item.toLowerCase().trim());
-            } else if (item is Map && item['platform'] != null) {
-              connectedPlatforms.add(
-                item['platform'].toString().toLowerCase().trim(),
-              );
             }
           }
         }
@@ -91,9 +116,14 @@ class AccountsViewController extends GetxController
     }
   }
 
-  // 🔗 ফেসবুক কানেক্ট করার ফাংশন
+  // 🔗 ফেসবুক কানেক্ট
   Future<void> connectFacebook() async {
-    final userId = _getUserId();
+    var userId = _getUserId();
+
+    if (userId.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      userId = prefs.getString('userId') ?? '';
+    }
 
     if (userId.isEmpty) {
       Get.snackbar('এরর', 'ইউজার আইডি পাওয়া যায়নি! অনুগ্রহ করে লগইন করুন।');
@@ -111,7 +141,7 @@ class AccountsViewController extends GetxController
     }
   }
 
-  // ⚠️ ১. ডিসকানেক্ট করার আগে কনফার্মেশন পপ-আপ ডায়ালগ
+  // ⚠️ কনফার্মেশন পপ-আপ
   void confirmDisconnect(String platform, String platformName) {
     Get.defaultDialog(
       title: 'কনফার্মেশন',
@@ -123,16 +153,21 @@ class AccountsViewController extends GetxController
       buttonColor: Colors.red,
       cancelTextColor: Colors.black,
       onConfirm: () {
-        Get.back(); // ডায়ালগ বন্ধ করা
-        disconnectPlatform(platform, platformName); // ডিসকানেক্ট এপিআই কল
+        Get.back();
+        disconnectPlatform(platform, platformName);
       },
     );
   }
 
-  // ❌ ২. ব্যাকএন্ড এপিআই-তে ডিসকানেক্ট রিকোয়েস্ট পাঠানো
+  // ❌ ডিসকানেক্ট রিকোয়েস্ট (ডাটাবেস থেকে রিমুভ)
   Future<void> disconnectPlatform(String platform, String platformName) async {
     try {
-      final userId = _getUserId();
+      var userId = _getUserId();
+      if (userId.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        userId = prefs.getString('userId') ?? '';
+      }
+
       if (userId.isEmpty) return;
 
       final response = await http.post(
@@ -143,6 +178,7 @@ class AccountsViewController extends GetxController
 
       if (response.statusCode == 200) {
         toggleConnection(platform, false);
+        if (platform == 'facebook') facebookPageName.value = '';
         Get.snackbar(
           'সফল',
           '$platformName সফলভাবে ডিসকানেক্ট করা হয়েছে!',
@@ -153,12 +189,10 @@ class AccountsViewController extends GetxController
       }
     } catch (e) {
       debugPrint('Disconnect error: $e');
-      // নেটওয়ার্ক সমস্যা হলেও UI আপডেট
       toggleConnection(platform, false);
     }
   }
 
-  // স্টেট টগল ও রিফ্রেশ
   void toggleConnection(String platform, bool status) {
     if (platform == 'facebook') isFacebookConnected.value = status;
     if (platform == 'instagram') isInstagramConnected.value = status;
@@ -192,7 +226,7 @@ class AccountsView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('সোশ্যাল অ্যাকাউন্টস'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -210,16 +244,24 @@ class AccountsView extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // ১. ফেসবুক পেজ কার্ড
+          // ১. ফেসবুক পেজ কার্ড (🎯 পেজের নাম ডায়নামিক করা হয়েছে)
           Obx(
             () => _buildAccountCard(
-              platformName: 'Facebook Page',
+              platformName:
+                  controller.isFacebookConnected.value &&
+                      controller.facebookPageName.value.isNotEmpty
+                  ? controller.facebookPageName.value
+                  : 'Facebook Page',
               icon: Icons.facebook,
               iconColor: const Color(0xFF1877F2),
               isConnected: controller.isFacebookConnected.value,
               onConnect: controller.connectFacebook,
-              onDisconnect: () =>
-                  controller.confirmDisconnect('facebook', 'Facebook Page'),
+              onDisconnect: () => controller.confirmDisconnect(
+                'facebook',
+                controller.facebookPageName.value.isNotEmpty
+                    ? controller.facebookPageName.value
+                    : 'Facebook Page',
+              ),
             ),
           ),
 
@@ -363,19 +405,13 @@ class AccountsView extends StatelessWidget {
                 ],
               ),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isConnected
-                    ? Colors.red.shade50
-                    : Colors.deepPurple,
-                foregroundColor: isConnected ? Colors.red : Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+            SmartButton(
+              text: isConnected ? 'Disconnect' : 'Connect',
+              backgroundColor: isConnected
+                  ? AppColors.dangerLight
+                  : AppColors.primary,
+              textColor: isConnected ? AppColors.danger : Colors.white,
               onPressed: isConnected ? onDisconnect : onConnect,
-              child: Text(isConnected ? 'Disconnect' : 'Connect'),
             ),
           ],
         ),

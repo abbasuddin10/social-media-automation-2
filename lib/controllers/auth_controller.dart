@@ -8,7 +8,6 @@ class AuthController extends GetxController {
   var isLoginMode = true.obs;
   var isLoading = false.obs;
 
-  // 🛡️ JWT টোকেন এবং ইউজার আইডি স্টোর করার জন্য ভেরিয়েবল যুক্ত করা হলো
   var token = ''.obs;
   var userId = ''.obs;
 
@@ -16,6 +15,19 @@ class AuthController extends GetxController {
   final passwordController = TextEditingController();
 
   final ApiService _apiService = ApiService();
+
+  @override
+  void onInit() {
+    super.onInit();
+    _loadSavedUserData(); // 🔄 অ্যাপ খোলার সাথে সাথে সেভ থাকা User ID লোড হবে
+  }
+
+  // 💾 লোকাল স্টোরেজ থেকে ডাটা লোড করার ফাংশন
+  Future<void> _loadSavedUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    userId.value = prefs.getString('userId') ?? '';
+    token.value = prefs.getString('token') ?? '';
+  }
 
   void toggleMode() {
     isLoginMode.value = !isLoginMode.value;
@@ -37,7 +49,7 @@ class AuthController extends GetxController {
       return;
     }
 
-    isLoading.value = true; // লোডিং শুরু
+    isLoading.value = true;
 
     try {
       final response = await _apiService.authUser(
@@ -47,7 +59,6 @@ class AuthController extends GetxController {
       );
 
       if (response['success'] == true) {
-        // 🛡️ ব্যাকএন্ডের পাঠানো token এবং user id সেভ করা (রেসপন্স স্ট্রাকচার অনুযায়ী)
         token.value = response['token'] ?? '';
         if (response['user'] != null) {
           userId.value = response['user']['id'].toString();
@@ -64,7 +75,10 @@ class AuthController extends GetxController {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', true);
 
-          // ফিউচার কাজের সুবিধার্থে টোকেনটি লোকাল স্টোরেজেও সেভ করে রাখা ভালো
+          // 🎯 সবচেয়ে গুরুত্বপূর্ণ: userId এবং token পাকাপাকিভাবে লোকাল স্টোরেজে সেভ করা
+          if (userId.value.isNotEmpty) {
+            await prefs.setString('userId', userId.value);
+          }
           if (token.value.isNotEmpty) {
             await prefs.setString('token', token.value);
           }
@@ -83,9 +97,16 @@ class AuthController extends GetxController {
         colorText: Colors.white,
       );
     } finally {
-      // সবচেয়ে গুরুত্বপূর্ণ: সাকসেস হোক বা এরর আসুক, লোডিং চিরতরে বন্ধ হবেই
       isLoading.value = false;
     }
+  }
+
+  // 🚪 লগআউট করার সময় লোকাল ডাটা ক্লিয়ার করার হেলপার ফাংশন
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    userId.value = '';
+    token.value = '';
   }
 
   @override

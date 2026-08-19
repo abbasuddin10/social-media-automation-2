@@ -31,4 +31,13 @@ class ApiService {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
+
+  Future<Map<String, dynamic>> googleLogin(String idToken) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/google-login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'id_token': idToken}),
+    );
+    return jsonDecode(response.body);
+  }
 }
