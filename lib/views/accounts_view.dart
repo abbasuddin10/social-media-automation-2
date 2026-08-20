@@ -83,20 +83,26 @@ class AccountsViewController extends GetxController
 
         facebookPageName.value = ''; // রিফ্রেশ করার সময় নাম রিসেট
 
-        if (data is List) {
-          for (var item in data) {
-            if (item is Map) {
-              String platform =
-                  item['platform']?.toString().toLowerCase().trim() ?? '';
-              connectedPlatforms.add(platform);
+        // 🎯 FIX 1: JSON Response Handling (Map and List Both Supported)
+        List accountsList = [];
+        if (data is Map && data.containsKey('accounts')) {
+          accountsList = data['accounts'] ?? [];
+        } else if (data is List) {
+          accountsList = data;
+        }
 
-              // 🎯 ফেসবুকের পেজের নাম পাওয়া গেলে আপডেট করা
-              if (platform == 'facebook' && item['page_name'] != null) {
-                facebookPageName.value = item['page_name'].toString();
-              }
-            } else if (item is String) {
-              connectedPlatforms.add(item.toLowerCase().trim());
+        for (var item in accountsList) {
+          if (item is Map) {
+            String platform =
+                item['platform']?.toString().toLowerCase().trim() ?? '';
+            connectedPlatforms.add(platform);
+
+            // 🎯 ফেসবুকের পেজের নাম পাওয়া গেলে আপডেট করা
+            if (platform == 'facebook' && item['page_name'] != null) {
+              facebookPageName.value = item['page_name'].toString();
             }
+          } else if (item is String) {
+            connectedPlatforms.add(item.toLowerCase().trim());
           }
         }
 
@@ -213,6 +219,7 @@ class AccountsViewController extends GetxController
     isPinterestConnected.refresh();
     isLinkedinConnected.refresh();
     isWhatsappConnected.refresh();
+    facebookPageName.refresh();
   }
 }
 
