@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_media_automation/views/automation_view.dart';
+import 'package:social_media_automation/views/profile_view.dart';
+import 'package:social_media_automation/views/templates_view.dart'; // 🎯 নতুন ইম্পোর্ট
 import 'auth_view.dart';
 import 'accounts_view.dart';
 
@@ -13,7 +15,7 @@ class HomeController extends GetxController {
     const HomeDashboardContent(),
     const AccountsView(),
     AutomationView(),
-    const Center(child: Text('Profile Page', style: TextStyle(fontSize: 18))),
+    const TemplatesView(), // 🎯 প্রোফাইলের জায়গায় নতুন টেমপ্লেট ভিউ
   ];
 
   void changeTab(int index) {
@@ -53,8 +55,8 @@ class HomeView extends StatelessWidget {
               label: 'Automation',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person_rounded),
-              label: 'Profile',
+              icon: Icon(Icons.grid_view_rounded), // 🎯 টেমপ্লেটের নতুন আইকন
+              label: 'Templates',
             ),
           ],
         ),
@@ -63,7 +65,6 @@ class HomeView extends StatelessWidget {
   }
 }
 
-// Home Dashboard Content Widget with Auto-Slide Feature
 class HomeDashboardContent extends StatefulWidget {
   const HomeDashboardContent({super.key});
 
@@ -160,9 +161,17 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: 'Logout',
+            icon: const CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, color: Colors.deepPurple, size: 20),
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ProfileView()),
+              );
+            },
           ),
         ],
       ),

@@ -188,6 +188,79 @@ class AutomationView extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 10),
+
+        // 🎯 AI Caption Preview Button
+        SizedBox(
+          width: double.infinity,
+          child: Obx(
+            () => ElevatedButton.icon(
+              onPressed: controller.isGeneratingAi.value
+                  ? null
+                  : controller.handleAiPreviewGeneration,
+              icon: controller.isGeneratingAi.value
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.deepPurple,
+                      ),
+                    )
+                  : const Icon(Icons.auto_awesome, size: 18),
+              label: Text(
+                controller.isGeneratingAi.value
+                    ? 'Generating AI Caption...'
+                    : 'Generate & Preview Caption',
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple.shade50,
+                foregroundColor: Colors.deepPurple,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // 🎯 Editable AI Generated Caption Field (Visible after generation)
+        Obx(
+          () => controller.isAiCaptionGenerated.value
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Generated Caption (Edit if needed):',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: controller.aiGeneratedCaptionController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Colors.deepPurple,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : const SizedBox.shrink(),
+        ),
+
         const SizedBox(height: 16),
         Row(
           children: [
@@ -234,15 +307,6 @@ class AutomationView extends StatelessWidget {
                 'Write your own caption or post:',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
-            ),
-            TextButton.icon(
-              onPressed: controller.askGeminiForHelp,
-              icon: const Icon(
-                Icons.auto_awesome,
-                color: Colors.amber,
-                size: 18,
-              ),
-              label: const Text('Ask Gemini AI'),
             ),
           ],
         ),
