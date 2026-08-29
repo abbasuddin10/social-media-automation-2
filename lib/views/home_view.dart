@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:social_media_automation/views/automation_agent_view.dart';
 import 'package:social_media_automation/views/automation_view.dart';
 import 'package:social_media_automation/views/profile_view.dart';
 import 'package:social_media_automation/views/templates_view.dart'; // 🎯 নতুন ইম্পোর্ট
@@ -13,7 +14,8 @@ class HomeController extends GetxController {
 
   final List<Widget> pages = [
     const HomeDashboardContent(),
-    const AccountsView(),
+    // const AccountsView(),
+    AutomationAgentView(),
     AutomationView(),
     const TemplatesView(), // 🎯 প্রোফাইলের জায়গায় নতুন টেমপ্লেট ভিউ
   ];
@@ -48,7 +50,7 @@ class HomeView extends StatelessWidget {
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.connect_without_contact_rounded),
-              label: 'Accounts',
+              label: 'ai posts',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.auto_fix_high_rounded),

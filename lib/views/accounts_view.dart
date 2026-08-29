@@ -20,9 +20,15 @@ class AccountsViewController extends GetxController
   var isPinterestConnected = false.obs;
   var isLinkedinConnected = false.obs;
   var isWhatsappConnected = false.obs;
+  var isTwitterConnected = false.obs; // 👈 টুইটার কানেকশন স্ট্যাটাস
 
-  // 🎯 ফেসবুক পেজের নাম ধরে রাখার জন্য ভ্যারিয়েবল
+  // 🎯 ফেসবুক, ইনস্টাগ্রাম, লিঙ্কডইন, ইউটিউব, হোয়াটসঅ্যাপ ও টুইটারের নাম/নম্বর
   var facebookPageName = ''.obs;
+  var instagramPageName = ''.obs;
+  var linkedinProfileName = ''.obs;
+  var youtubeChannelName = ''.obs;
+  var whatsappNumber = ''.obs;
+  var twitterProfileName = ''.obs; // 👈 টুইটার প্রোফাইল নেম
 
   @override
   void onInit() {
@@ -55,7 +61,13 @@ class AccountsViewController extends GetxController
     return '';
   }
 
-  // 🔄 ডাটাবেজ থেকে কানেকশন স্ট্যাটাস ও পেজের নাম চেক করা
+  // 🔑 সেফ পদ্ধতিতে Auth Token নেওয়ার হেলপার
+  Future<String> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
+  }
+
+  // 🔄 ডাটাবেজ থেকে কানেকশন স্ট্যাটাস ও পেজ/প্রোফাইলের নাম চেক করা
   Future<void> fetchConnectionStatus() async {
     try {
       var userId = _getUserId();
@@ -82,8 +94,13 @@ class AccountsViewController extends GetxController
         List<String> connectedPlatforms = [];
 
         facebookPageName.value = ''; // রিফ্রেশ করার সময় নাম রিসেট
+        instagramPageName.value = '';
+        linkedinProfileName.value = '';
+        youtubeChannelName.value = '';
+        whatsappNumber.value = '';
+        twitterProfileName.value = ''; // 👈 রিসেট
 
-        // 🎯 FIX 1: JSON Response Handling (Map and List Both Supported)
+        // 🎯 JSON Response Handling
         List accountsList = [];
         if (data is Map && data.containsKey('accounts')) {
           accountsList = data['accounts'] ?? [];
@@ -97,9 +114,24 @@ class AccountsViewController extends GetxController
                 item['platform']?.toString().toLowerCase().trim() ?? '';
             connectedPlatforms.add(platform);
 
-            // 🎯 ফেসবুকের পেজের নাম পাওয়া গেলে আপডেট করা
             if (platform == 'facebook' && item['page_name'] != null) {
               facebookPageName.value = item['page_name'].toString();
+            }
+            if (platform == 'instagram' && item['page_name'] != null) {
+              instagramPageName.value = item['page_name'].toString();
+            }
+            if (platform == 'linkedin' && item['page_name'] != null) {
+              linkedinProfileName.value = item['page_name'].toString();
+            }
+            if (platform == 'youtube' && item['page_name'] != null) {
+              youtubeChannelName.value = item['page_name'].toString();
+            }
+            if (platform == 'whatsapp' && item['page_name'] != null) {
+              whatsappNumber.value = item['page_name'].toString();
+            }
+            if ((platform == 'twitter' || platform == 'x') &&
+                item['page_name'] != null) {
+              twitterProfileName.value = item['page_name'].toString();
             }
           } else if (item is String) {
             connectedPlatforms.add(item.toLowerCase().trim());
@@ -114,6 +146,9 @@ class AccountsViewController extends GetxController
         isPinterestConnected.value = connectedPlatforms.contains('pinterest');
         isLinkedinConnected.value = connectedPlatforms.contains('linkedin');
         isWhatsappConnected.value = connectedPlatforms.contains('whatsapp');
+        isTwitterConnected.value =
+            connectedPlatforms.contains('twitter') ||
+            connectedPlatforms.contains('x');
 
         _refreshAllStates();
       }
@@ -122,10 +157,9 @@ class AccountsViewController extends GetxController
     }
   }
 
-  // 🔗 ফেসবুক কানেক্ট
+  // 🔗 ফেসবুক/ইনস্টাগ্রাম কানেক্ট (Meta OAuth)
   Future<void> connectFacebook() async {
     var userId = _getUserId();
-
     if (userId.isEmpty) {
       final prefs = await SharedPreferences.getInstance();
       userId = prefs.getString('userId') ?? '';
@@ -144,6 +178,175 @@ class AccountsViewController extends GetxController
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
       throw 'Could not launch $url';
+    }
+  }
+
+  // 💼 লিঙ্কডইন কানেক্ট (LinkedIn OAuth)
+  Future<void> connectLinkedin() async {
+    var userId = _getUserId();
+    if (userId.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      userId = prefs.getString('userId') ?? '';
+    }
+
+    if (userId.isEmpty) {
+      Get.snackbar('এরর', 'ইউজার আইডি পাওয়া যায়নি! অনুগ্রহ করে লগইন করুন।');
+      return;
+    }
+
+    final url = Uri.parse(
+      'https://social-backend-1hwz.onrender.com/auth/linkedin?user_id=$userId',
+    );
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
+  // 🎥 ইউটিউব কানেক্ট (Google OAuth)
+  Future<void> connectYoutube() async {
+    var userId = _getUserId();
+    if (userId.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      userId = prefs.getString('userId') ?? '';
+    }
+
+    if (userId.isEmpty) {
+      Get.snackbar('এরর', 'ইউজার আইডি পাওয়া যায়নি! অনুগ্রহ করে লগইন করুন।');
+      return;
+    }
+
+    final url = Uri.parse(
+      'https://social-backend-1hwz.onrender.com/auth/youtube?user_id=$userId',
+    );
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
+  // 🐦 টুইটার কানেক্ট (Twitter/X OAuth)
+  Future<void> connectTwitter() async {
+    var userId = _getUserId();
+    if (userId.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      userId = prefs.getString('userId') ?? '';
+    }
+
+    if (userId.isEmpty) {
+      Get.snackbar('এরর', 'ইউজার আইডি পাওয়া যায়নি! অনুগ্রহ করে লগইন করুন।');
+      return;
+    }
+
+    final url = Uri.parse(
+      'https://social-backend-1hwz.onrender.com/auth/twitter?user_id=$userId',
+    );
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
+  // 💬 হোয়াটসঅ্যাপ কানেক্ট (Dialog Box & API Call)
+  void showWhatsappDialog() {
+    final TextEditingController phoneController = TextEditingController(
+      text: whatsappNumber.value,
+    );
+
+    Get.defaultDialog(
+      title: 'WhatsApp Connect',
+      titleStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+      content: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: Column(
+          children: [
+            const Text(
+              'আপনার হোয়াটসঅ্যাপ নম্বরটি কান্ট্রি কোডসহ লিখুন (যেমন: 8801712345678)',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'WhatsApp Number',
+                hintText: '88017xxxxxxxx',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.phone),
+              ),
+            ),
+          ],
+        ),
+      ),
+      textConfirm: 'Save & Connect',
+      textCancel: 'Cancel',
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.green,
+      onConfirm: () async {
+        final phone = phoneController.text.trim();
+        if (phone.isEmpty) {
+          Get.snackbar(
+            'ত্রুটি',
+            'অনুগ্রহ করে একটি সঠিক হোয়াটসঅ্যাপ নম্বর দিন!',
+          );
+          return;
+        }
+        Get.back();
+        await updateWhatsappNumber(phone);
+      },
+    );
+  }
+
+  // 📤 ব্যাকএন্ডে হোয়াটসঅ্যাপ নম্বর আপডেট করার রিকোয়েস্ট
+  Future<void> updateWhatsappNumber(String phone) async {
+    try {
+      final token = await _getToken();
+      if (token.isEmpty) {
+        Get.snackbar(
+          'ত্রুটি',
+          'অথেন্টিকেশন টোকেন পাওয়া যায়নি! আবার লগইন করুন।',
+        );
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse(
+          'https://social-backend-1hwz.onrender.com/api/user/update-whatsapp',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'whatsappNumber': phone}),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        isWhatsappConnected.value = true;
+        whatsappNumber.value = phone;
+        Get.snackbar(
+          'সফল',
+          'WhatsApp অ্যাকাউন্ট সফলভাবে সংযুক্ত করা হয়েছে!',
+          backgroundColor: Colors.green.shade100,
+        );
+        fetchConnectionStatus();
+      } else {
+        Get.snackbar(
+          'ত্রুটি',
+          data['message'] ?? 'হোয়াটসঅ্যাপ আপডেট করতে সমস্যা হয়েছে!',
+        );
+      }
+    } catch (e) {
+      debugPrint('WhatsApp Update Error: $e');
+      Get.snackbar('ত্রুটি', 'নেটওয়ার্ক কানেকশনে সমস্যা হয়েছে!');
     }
   }
 
@@ -185,6 +388,12 @@ class AccountsViewController extends GetxController
       if (response.statusCode == 200) {
         toggleConnection(platform, false);
         if (platform == 'facebook') facebookPageName.value = '';
+        if (platform == 'instagram') instagramPageName.value = '';
+        if (platform == 'linkedin') linkedinProfileName.value = '';
+        if (platform == 'youtube') youtubeChannelName.value = '';
+        if (platform == 'whatsapp') whatsappNumber.value = '';
+        if (platform == 'twitter' || platform == 'x')
+          twitterProfileName.value = '';
         Get.snackbar(
           'সফল',
           '$platformName সফলভাবে ডিসকানেক্ট করা হয়েছে!',
@@ -207,6 +416,8 @@ class AccountsViewController extends GetxController
     if (platform == 'pinterest') isPinterestConnected.value = status;
     if (platform == 'linkedin') isLinkedinConnected.value = status;
     if (platform == 'whatsapp') isWhatsappConnected.value = status;
+    if (platform == 'twitter' || platform == 'x')
+      isTwitterConnected.value = status;
 
     _refreshAllStates();
   }
@@ -219,7 +430,13 @@ class AccountsViewController extends GetxController
     isPinterestConnected.refresh();
     isLinkedinConnected.refresh();
     isWhatsappConnected.refresh();
+    isTwitterConnected.refresh();
     facebookPageName.refresh();
+    instagramPageName.refresh();
+    linkedinProfileName.refresh();
+    youtubeChannelName.refresh();
+    whatsappNumber.refresh();
+    twitterProfileName.refresh();
   }
 }
 
@@ -251,7 +468,7 @@ class AccountsView extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // ১. ফেসবুক পেজ কার্ড (🎯 পেজের নাম ডায়নামিক করা হয়েছে)
+          // ১. ফেসবুক পেজ কার্ড
           Obx(
             () => _buildAccountCard(
               platformName:
@@ -275,14 +492,20 @@ class AccountsView extends StatelessWidget {
           // ২. ইনস্টাগ্রাম অ্যাকাউন্ট কার্ড
           Obx(
             () => _buildAccountCard(
-              platformName: 'Instagram Business',
+              platformName:
+                  controller.isInstagramConnected.value &&
+                      controller.instagramPageName.value.isNotEmpty
+                  ? controller.instagramPageName.value
+                  : 'Instagram Business',
               icon: Icons.camera_alt,
               iconColor: Colors.pink,
               isConnected: controller.isInstagramConnected.value,
-              onConnect: () => controller.toggleConnection('instagram', true),
+              onConnect: controller.connectFacebook,
               onDisconnect: () => controller.confirmDisconnect(
                 'instagram',
-                'Instagram Business',
+                controller.instagramPageName.value.isNotEmpty
+                    ? controller.instagramPageName.value
+                    : 'Instagram Business',
               ),
             ),
           ),
@@ -290,13 +513,21 @@ class AccountsView extends StatelessWidget {
           // ৩. ইউটিউব চ্যানেল কার্ড
           Obx(
             () => _buildAccountCard(
-              platformName: 'YouTube Channel',
+              platformName:
+                  controller.isYoutubeConnected.value &&
+                      controller.youtubeChannelName.value.isNotEmpty
+                  ? controller.youtubeChannelName.value
+                  : 'YouTube Channel',
               icon: Icons.play_arrow_rounded,
               iconColor: Colors.red,
               isConnected: controller.isYoutubeConnected.value,
-              onConnect: () => controller.toggleConnection('youtube', true),
-              onDisconnect: () =>
-                  controller.confirmDisconnect('youtube', 'YouTube Channel'),
+              onConnect: controller.connectYoutube,
+              onDisconnect: () => controller.confirmDisconnect(
+                'youtube',
+                controller.youtubeChannelName.value.isNotEmpty
+                    ? controller.youtubeChannelName.value
+                    : 'YouTube Channel',
+              ),
             ),
           ),
 
@@ -331,26 +562,63 @@ class AccountsView extends StatelessWidget {
           // ৬. লিংকডইন কার্ড
           Obx(
             () => _buildAccountCard(
-              platformName: 'LinkedIn Profile',
+              platformName:
+                  controller.isLinkedinConnected.value &&
+                      controller.linkedinProfileName.value.isNotEmpty
+                  ? controller.linkedinProfileName.value
+                  : 'LinkedIn Profile',
               icon: Icons.work,
               iconColor: Colors.blue,
               isConnected: controller.isLinkedinConnected.value,
-              onConnect: () => controller.toggleConnection('linkedin', true),
-              onDisconnect: () =>
-                  controller.confirmDisconnect('linkedin', 'LinkedIn Profile'),
+              onConnect: controller.connectLinkedin,
+              onDisconnect: () => controller.confirmDisconnect(
+                'linkedin',
+                controller.linkedinProfileName.value.isNotEmpty
+                    ? controller.linkedinProfileName.value
+                    : 'LinkedIn Profile',
+              ),
             ),
           ),
 
-          // ৭. হোয়াটসঅ্যাপ বিজনেস কার্ড
+          // ৭. হোয়াটসঅ্যাপ বিজনেস কার্ড (🎯 Dynamic WhatsApp Dialog & API Integrated)
           Obx(
             () => _buildAccountCard(
-              platformName: 'WhatsApp Business',
+              platformName:
+                  controller.isWhatsappConnected.value &&
+                      controller.whatsappNumber.value.isNotEmpty
+                  ? 'WhatsApp (${controller.whatsappNumber.value})'
+                  : 'WhatsApp Business',
               icon: Icons.chat,
               iconColor: Colors.green,
               isConnected: controller.isWhatsappConnected.value,
-              onConnect: () => controller.toggleConnection('whatsapp', true),
-              onDisconnect: () =>
-                  controller.confirmDisconnect('whatsapp', 'WhatsApp Business'),
+              onConnect: controller.showWhatsappDialog,
+              onDisconnect: () => controller.confirmDisconnect(
+                'whatsapp',
+                controller.whatsappNumber.value.isNotEmpty
+                    ? 'WhatsApp (${controller.whatsappNumber.value})'
+                    : 'WhatsApp Business',
+              ),
+            ),
+          ),
+
+          // ৮. টুইটার (X) অ্যাকাউন্ট কার্ড 👈 নতুন যুক্ত করা হয়েছে
+          Obx(
+            () => _buildAccountCard(
+              platformName:
+                  controller.isTwitterConnected.value &&
+                      controller.twitterProfileName.value.isNotEmpty
+                  ? controller.twitterProfileName.value
+                  : 'Twitter / X Profile',
+              icon: Icons.alternate_email,
+              iconColor: const Color(0xFF1DA1F2),
+              isConnected: controller.isTwitterConnected.value,
+              onConnect: controller.connectTwitter,
+              onDisconnect: () => controller.confirmDisconnect(
+                'twitter',
+                controller.twitterProfileName.value.isNotEmpty
+                    ? controller.twitterProfileName.value
+                    : 'Twitter / X Profile',
+              ),
             ),
           ),
         ],
