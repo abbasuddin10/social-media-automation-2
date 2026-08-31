@@ -4,18 +4,35 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_media_automation/views/automation_agent_view.dart';
 import 'package:social_media_automation/views/automation_view.dart';
+import 'package:social_media_automation/views/instant_post_view.dart';
 import 'package:social_media_automation/views/profile_view.dart';
 import 'package:social_media_automation/views/templates_view.dart'; // 🎯 নতুন ইম্পোর্ট
 import 'auth_view.dart';
-import 'accounts_view.dart';
+
+// 🎯 Instant ট্যাবের জন্য প্লেসহোল্ডার ভিউ
+class InstantView extends StatelessWidget {
+  const InstantView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Text(
+          'Instant Page',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
 
 class HomeController extends GetxController {
   var currentIndex = 0.obs;
 
   final List<Widget> pages = [
     const HomeDashboardContent(),
-    // const AccountsView(),
     AutomationAgentView(),
+    const InstantPostView(), // 🎯 ঠিক মাঝামাঝি যুক্ত করা Instant ভিউ (Index 2)
     AutomationView(),
     const TemplatesView(), // 🎯 প্রোফাইলের জায়গায় নতুন টেমপ্লেট ভিউ
   ];
@@ -35,7 +52,7 @@ class HomeView extends StatelessWidget {
     return Scaffold(
       body: Obx(() => controller.pages[controller.currentIndex.value]),
 
-      // Bottom Navigation Bar with 4 Buttons
+      // Bottom Navigation Bar with 5 Buttons
       bottomNavigationBar: Obx(
         () => BottomNavigationBar(
           currentIndex: controller.currentIndex.value,
@@ -50,7 +67,14 @@ class HomeView extends StatelessWidget {
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.connect_without_contact_rounded),
-              label: 'ai posts',
+              label:
+                  'ai video', // 🎯 ai posts এর জায়গায় ai video আপডেট করা হয়েছে
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                Icons.flash_on_rounded,
+              ), // 🎯 ঠিক মাঝামাঝি Instant ট্যাব যুক্ত করা হয়েছে
+              label: 'instant',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.auto_fix_high_rounded),

@@ -27,6 +27,8 @@ class AutomationController extends GetxController {
 
   var postToFacebook = true.obs;
   var postToInstagram = false.obs;
+  var postToLinkedin = false.obs;
+  var postToTwitter = false.obs;
   var postToPinterest = false.obs;
 
   var uploadedImages = <String>[].obs;
@@ -175,6 +177,8 @@ class AutomationController extends GetxController {
     postToFacebook.value = val;
     postToInstagram.value = val;
     postToPinterest.value = val;
+    postToLinkedin.value = val;
+    postToTwitter.value = val;
   }
 
   void applyQuickTemplate(String text) {

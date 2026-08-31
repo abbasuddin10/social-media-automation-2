@@ -4,11 +4,15 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'automation_agent_view.dart';
 import '../controllers/automation_controller.dart';
+import '../controllers/accounts_view_controller.dart';
 
 class AutomationView extends StatelessWidget {
   AutomationView({super.key});
 
   final AutomationController controller = Get.put(AutomationController());
+  final AccountsViewController accountsController = Get.put(
+    AccountsViewController(),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +107,7 @@ class AutomationView extends StatelessWidget {
               }
             }),
 
-            // --- Social Accounts Selection & Bottom Submit Button ---
+            // --- Target Social Platforms Section ---
             Obx(() {
               if (controller.selectedTab.value == 0) {
                 return const SizedBox.shrink();
@@ -112,51 +116,17 @@ class AutomationView extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   const Divider(),
+                  const SizedBox(height: 8),
 
-                  const Text(
-                    'Select Social Accounts:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  CheckboxListTile(
-                    title: const Text('Select All Accounts'),
-                    value: controller.selectAll.value,
-                    onChanged: (val) => controller.toggleSelectAll(val!),
-                    contentPadding: EdgeInsets.zero,
-                    activeColor: Colors.deepPurple,
-                  ),
-                  Column(
-                    children: [
-                      CheckboxListTile(
-                        title: const Text('Facebook Page'),
-                        value: controller.postToFacebook.value,
-                        onChanged: (val) =>
-                            controller.postToFacebook.value = val!,
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: Colors.deepPurple,
-                      ),
-                      CheckboxListTile(
-                        title: const Text('Instagram Business'),
-                        value: controller.postToInstagram.value,
-                        onChanged: (val) =>
-                            controller.postToInstagram.value = val!,
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: Colors.deepPurple,
-                      ),
-                      CheckboxListTile(
-                        title: const Text('Pinterest Profile'),
-                        value: controller.postToPinterest.value,
-                        onChanged: (val) =>
-                            controller.postToPinterest.value = val!,
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: Colors.deepPurple,
-                      ),
-                    ],
+                  _AccountSelectorSection(
+                    controller: controller,
+                    accountsCtrl: accountsController,
                   ),
                   const SizedBox(height: 20),
 
-                  // সোশ্যাল অ্যাকাউন্ট সিলেক্টের পরে সাবমিট/সেভ বাটন
+                  // Submit Button
                   if (controller.selectedTab.value == 3) ...[
                     if (controller.scheduledPreviewList.isNotEmpty)
                       SizedBox(
@@ -165,7 +135,7 @@ class AutomationView extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: controller.isLoading.value
                               ? null
-                              : controller.confirmAndSaveSchedulePosts,
+                              : () => _handlePostSubmission(isSchedule: true),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
@@ -193,7 +163,7 @@ class AutomationView extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: controller.isLoading.value
                             ? null
-                            : controller.submitData,
+                            : () => _handlePostSubmission(isSchedule: false),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepPurple,
                           foregroundColor: Colors.white,
@@ -220,7 +190,7 @@ class AutomationView extends StatelessWidget {
               );
             }),
 
-            // --- Active Scheduled Posts Section ---
+            // --- Active Scheduled Posts List ---
             Obx(() {
               if (controller.selectedTab.value != 3) {
                 return const SizedBox.shrink();
@@ -271,6 +241,29 @@ class AutomationView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _handlePostSubmission({required bool isSchedule}) {
+    if (!controller.postToFacebook.value &&
+        !controller.postToInstagram.value &&
+        !controller.postToPinterest.value &&
+        !controller.postToLinkedin.value &&
+        !controller.postToTwitter.value) {
+      Get.snackbar(
+        'Warning',
+        'Please select at least one connected social media platform.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade800,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (isSchedule) {
+      controller.confirmAndSaveSchedulePosts();
+    } else {
+      controller.submitData();
+    }
   }
 
   Widget _buildFullyAiTab() {
@@ -475,7 +468,6 @@ class AutomationView extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Time Picker Container
         InkWell(
           onTap: () async {
             TimeOfDay? pickedTime = await showTimePicker(
@@ -518,7 +510,6 @@ class AutomationView extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Image Selection Header
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -543,7 +534,6 @@ class AutomationView extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // AI Captions Generate Button
         SizedBox(
           width: double.infinity,
           child: Obx(
@@ -578,7 +568,6 @@ class AutomationView extends StatelessWidget {
           ),
         ),
 
-        // Schedule Preview Cards List
         Obx(() {
           if (controller.scheduledPreviewList.isEmpty) {
             return const SizedBox.shrink();
@@ -1014,6 +1003,241 @@ class AutomationView extends StatelessWidget {
                 ),
               ],
             ),
+    );
+  }
+}
+
+// --- Account Selector Section (Shows Connected & Unconnected Platforms) ---
+class _AccountSelectorSection extends StatelessWidget {
+  final AutomationController controller;
+  final AccountsViewController accountsCtrl;
+
+  const _AccountSelectorSection({
+    required this.controller,
+    required this.accountsCtrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      // প্ল্যাটফর্মের সম্পূর্ণ লিস্ট (কানেক্টেড এবং আনকানেক্টেড উভয়ই)
+      final List<Map<String, dynamic>> allPlatforms = [
+        {
+          'name': 'Facebook Page',
+          'icon': Icons.facebook,
+          'color': Colors.blue,
+          'isConnected': accountsCtrl.isFacebookConnected.value,
+          'isSelected': controller.postToFacebook.value,
+          'onToggle': (bool val) => controller.postToFacebook.value = val,
+        },
+        {
+          'name': 'Instagram Business',
+          'icon': Icons.camera_alt,
+          'color': Colors.pink,
+          'isConnected': accountsCtrl.isInstagramConnected.value,
+          'isSelected': controller.postToInstagram.value,
+          'onToggle': (bool val) => controller.postToInstagram.value = val,
+        },
+        {
+          'name': 'Pinterest Profile',
+          'icon': Icons.pin_drop,
+          'color': Colors.red,
+          'isConnected': accountsCtrl.isPinterestConnected.value,
+          'isSelected': controller.postToPinterest.value,
+          'onToggle': (bool val) => controller.postToPinterest.value = val,
+        },
+        {
+          'name': 'LinkedIn Profile',
+          'icon': Icons.work,
+          'color': Colors.blue.shade700,
+          'isConnected': accountsCtrl.isLinkedinConnected.value,
+          'isSelected': controller.postToLinkedin.value,
+          'onToggle': (bool val) => controller.postToLinkedin.value = val,
+        },
+        {
+          'name': 'Twitter / X',
+          'icon': Icons.tag,
+          'color': Colors.lightBlue,
+          'isConnected': accountsCtrl.isTwitterConnected.value,
+          'isSelected': controller.postToTwitter.value,
+          'onToggle': (bool val) => controller.postToTwitter.value = val,
+        },
+      ];
+
+      // শুধু কানেক্ট থাকা প্ল্যাটফর্মগুলোর মধ্যে সব সিলেক্টেড কি না তা চেক করা
+      final connectedPlatforms = allPlatforms
+          .where((p) => p['isConnected'] == true)
+          .toList();
+      int selectedCount = connectedPlatforms
+          .where((p) => p['isSelected'] == true)
+          .length;
+      bool isAllSelected =
+          connectedPlatforms.isNotEmpty &&
+          selectedCount == connectedPlatforms.length;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Target Platforms',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              if (connectedPlatforms.isNotEmpty)
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () {
+                    bool nextState = !isAllSelected;
+                    controller.toggleSelectAll(nextState);
+                  },
+                  icon: Icon(
+                    isAllSelected
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    size: 18,
+                    color: Colors.deepPurple,
+                  ),
+                  label: const Text(
+                    'Select All',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 4.0,
+            children: allPlatforms.map((platform) {
+              final bool isConnected = platform['isConnected'] as bool;
+              final bool isSelected = platform['isSelected'] as bool;
+              final String platformName = platform['name'] as String;
+              final IconData icon = platform['icon'] as IconData;
+              final Color color = platform['color'] as Color;
+              final Function(bool) onToggle =
+                  platform['onToggle'] as Function(bool);
+
+              if (isConnected) {
+                // ১. যদি কানেক্টেড থাকে - স্বাভাবিক ফিল্টার চিপ
+                return FilterChip(
+                  visualDensity: VisualDensity.compact,
+                  avatar: Icon(icon, size: 16, color: color),
+                  label: Text(
+                    platformName,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  selected: isSelected,
+                  selectedColor: Colors.deepPurple.shade100,
+                  checkmarkColor: Colors.deepPurple,
+                  onSelected: (val) => onToggle(val),
+                );
+              } else {
+                // ২. যদি কানেক্টেড না থাকে - হালকা (Dimmed) চিপ এবং ক্লিকে পপ-আপ রিডাইরেক্ট
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _showConnectAccountDialog(context, platformName),
+                  child: Opacity(
+                    opacity: 0.45, // হালকা দৃশ্যমান করার জন্য
+                    child: Chip(
+                      visualDensity: VisualDensity.compact,
+                      backgroundColor: Colors.grey.shade200,
+                      avatar: Icon(icon, size: 16, color: Colors.grey.shade700),
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            platformName,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.add_circle_outline,
+                            size: 14,
+                            color: Colors.deepPurple,
+                          ),
+                        ],
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.grey.shade400),
+                      ),
+                    ),
+                  ),
+                );
+              }
+            }).toList(),
+          ),
+        ],
+      );
+    });
+  }
+
+  // অ্যাকাউন্ট কানেক্ট করার জন্য পপ-আপ ডায়ালগ
+  // অ্যাকাউন্ট কানেক্ট করার জন্য পপ-আপ ডায়ালগ (RenderFlex Overflow Fixed)
+  void _showConnectAccountDialog(BuildContext context, String platformName) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.link_off, color: Colors.orangeAccent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '$platformName Not Connected',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: [
+                Text(
+                  'আপনি এখনো $platformName কানেক্ট করেননি। পোস্ট করতে হলে প্রথমে আপনার অ্যাকাউন্টটি কানেক্ট করে নিন।',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Get.toNamed('/accounts'); // Accounts পেজে যাওয়ার রাউট
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Connect Now'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
