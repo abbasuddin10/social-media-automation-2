@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-//import 'package:social_media_automation/controllers/accounts_view_controller.dart';
 import 'package:social_media_automation/controllers/accounts_view_controller.dart';
 import '../controllers/instant_post_controller.dart';
 
@@ -301,10 +300,10 @@ class _AccountSelectorSection extends GetView<InstantPostController> {
         return accountsCtrl.isFacebookConnected.value;
       case 'instagram':
         return accountsCtrl.isInstagramConnected.value;
-      case 'youtube':
-        return accountsCtrl.isYoutubeConnected.value;
       case 'linkedin':
         return accountsCtrl.isLinkedinConnected.value;
+      case 'pinterest':
+        return accountsCtrl.isPinterestConnected.value;
       case 'twitter':
         return accountsCtrl.isTwitterConnected.value;
       default:
@@ -323,8 +322,8 @@ class _AccountSelectorSection extends GetView<InstantPostController> {
           int totalConnected = 0;
           if (accountsCtrl.isFacebookConnected.value) totalConnected++;
           if (accountsCtrl.isInstagramConnected.value) totalConnected++;
-          if (accountsCtrl.isYoutubeConnected.value) totalConnected++;
           if (accountsCtrl.isLinkedinConnected.value) totalConnected++;
+          if (accountsCtrl.isPinterestConnected.value) totalConnected++;
           if (accountsCtrl.isTwitterConnected.value) totalConnected++;
 
           bool isAllSelected =

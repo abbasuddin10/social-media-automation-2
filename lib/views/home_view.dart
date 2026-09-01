@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:social_media_automation/views/ai_video_view.dart';
 import 'package:social_media_automation/views/automation_agent_view.dart';
 import 'package:social_media_automation/views/automation_view.dart';
 import 'package:social_media_automation/views/instant_post_view.dart';
@@ -31,7 +32,7 @@ class HomeController extends GetxController {
 
   final List<Widget> pages = [
     const HomeDashboardContent(),
-    AutomationAgentView(),
+    const AiVideoView(),
     const InstantPostView(), // 🎯 ঠিক মাঝামাঝি যুক্ত করা Instant ভিউ (Index 2)
     AutomationView(),
     const TemplatesView(), // 🎯 প্রোফাইলের জায়গায় নতুন টেমপ্লেট ভিউ

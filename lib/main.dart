@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 // 📂 Views Import
 import 'views/accounts_view.dart';
+import 'views/ai_video_view.dart';
 import 'views/auth_view.dart';
 import 'views/home_view.dart';
 import 'views/instant_post_view.dart';
@@ -57,6 +58,7 @@ class MyApp extends StatelessWidget {
         GetPage(name: '/auth', page: () => const AuthView()),
         GetPage(name: '/accounts', page: () => const AccountsView()),
         GetPage(name: '/instant-post', page: () => const InstantPostView()),
+        GetPage(name: '/ai-video', page: () => const AiVideoView()),
       ],
     );
   }

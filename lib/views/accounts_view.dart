@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:social_media_automation/constants/app_colors.dart';
 import 'package:social_media_automation/controllers/accounts_view_controller.dart';
-import 'package:social_media_automation/widgets/smart_button.dart';
 
 class AccountsView extends StatelessWidget {
   const AccountsView({super.key});
@@ -244,13 +243,19 @@ class AccountsView extends StatelessWidget {
                 ],
               ),
             ),
-            SmartButton(
-              text: isConnected ? 'Disconnect' : 'Connect',
-              backgroundColor: isConnected
-                  ? AppColors.dangerLight
-                  : AppColors.primary,
-              textColor: isConnected ? AppColors.danger : Colors.white,
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isConnected
+                    ? Colors.red.shade100
+                    : AppColors.primary,
+                foregroundColor: isConnected ? Colors.red : Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               onPressed: isConnected ? onDisconnect : onConnect,
+              child: Text(isConnected ? 'Disconnect' : 'Connect'),
             ),
           ],
         ),

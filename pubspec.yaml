@@ -26,6 +26,8 @@ dependencies:
   flutter_dotenv: ^5.1.0 # 👈 ১. প্যাকেজটি যুক্ত করা হয়েছে
   google_generative_ai: ^0.4.0 # Gemini AI চ্যাট হ্যান্ডেল করার জন্য
   package_info_plus: ^8.0.0    # অ্যাপ ভার্সন পাওয়ার জন্য
+  intl: ^0.20.2
+  file_picker: ^11.0.3
 
 dev_dependencies:
   flutter_test:

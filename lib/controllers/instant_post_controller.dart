@@ -24,11 +24,11 @@ class InstantPostController extends GetxController {
   var captionText = ''.obs;
   var hashtagText = ''.obs;
 
-  // 🎯 সোশ্যাল মিডিয়া অ্যাকাউন্ট লিস্ট (রিয়েলটাইম প্ল্যাটফর্মের জন্য)
+  // 🎯 সোশ্যাল মিডিয়া অ্যাকাউন্ট লিস্ট (YouTube বদলে LinkedIn যুক্ত করা হয়েছে)
   var connectedAccounts = <Map<String, String>>[
     {'key': 'facebook', 'platform': 'Facebook Page'},
     {'key': 'instagram', 'platform': 'Instagram Business'},
-    {'key': 'youtube', 'platform': 'YouTube Shorts/Video'},
+    {'key': 'linkedin', 'platform': 'LinkedIn Profile/Page'},
     {'key': 'pinterest', 'platform': 'Pinterest Profile'},
     {'key': 'twitter', 'platform': 'Twitter (X)'},
   ].obs;
@@ -55,19 +55,24 @@ class InstantPostController extends GetxController {
   // 🎯 শুধুমাত্র যা কানেক্টেড আছে তা সিলেক্ট রাখা
   void _syncConnectedAccounts() {
     selectedAccounts.clear();
-    if (accountsController.isFacebookConnected.value)
+    if (accountsController.isFacebookConnected.value) {
       selectedAccounts.add('facebook');
-    if (accountsController.isInstagramConnected.value)
+    }
+    if (accountsController.isInstagramConnected.value) {
       selectedAccounts.add('instagram');
-    if (accountsController.isYoutubeConnected.value)
-      selectedAccounts.add('youtube');
-    if (accountsController.isLinkedinConnected.value)
+    }
+    if (accountsController.isLinkedinConnected.value) {
       selectedAccounts.add('linkedin');
-    if (accountsController.isTwitterConnected.value)
+    }
+    if (accountsController.isPinterestConnected.value) {
+      selectedAccounts.add('pinterest');
+    }
+    if (accountsController.isTwitterConnected.value) {
       selectedAccounts.add('twitter');
+    }
   }
 
-  // 🔗 অ্যাকাউন্ট সিলেকশন টগল এবং লক অ্যাকাউন্ট হ্যান্ডলিং
+  // 🔗 অ্যাকাউন্ট সিলেকশন টগল এবং লক অ্যাকাউন্ট হ্যান্ডলিং (ক্র্যাশ ফিক্স সহ)
   void toggleAccountSelection(
     String key,
     bool isConnected,
@@ -84,8 +89,15 @@ class InstantPostController extends GetxController {
         confirmTextColor: Colors.white,
         buttonColor: Colors.deepPurple,
         onConfirm: () {
-          Get.back();
-          Get.toNamed('/accounts'); // আপনার রুট অনুযায়ী পরিবর্তন করতে পারেন
+          // ১. অ্যাপ ক্র্যাশ প্রতিরোধে আগে ডায়ালগটি বন্ধ করুন
+          if (Get.isDialogOpen ?? false) {
+            Get.back();
+          }
+
+          // ২. ডায়ালগ বন্ধ হওয়া নিশ্চিত হয়ে নেভিগেট করুন
+          Future.microtask(() {
+            Get.toNamed('/accounts');
+          });
         },
       );
       return;
@@ -243,7 +255,7 @@ class InstantPostController extends GetxController {
       Map<String, bool> platformsMap = {
         'facebook': selectedAccounts.contains('facebook'),
         'instagram': selectedAccounts.contains('instagram'),
-        'youtube': selectedAccounts.contains('youtube'),
+        'linkedin': selectedAccounts.contains('linkedin'),
         'pinterest': selectedAccounts.contains('pinterest'),
         'twitter': selectedAccounts.contains('twitter'),
       };
@@ -263,7 +275,7 @@ class InstantPostController extends GetxController {
       // 🎯 আলাদা কী ফিল্ড হিসেবেও পাঠানো
       request.fields['facebook'] = platformsMap['facebook'].toString();
       request.fields['instagram'] = platformsMap['instagram'].toString();
-      request.fields['youtube'] = platformsMap['youtube'].toString();
+      request.fields['linkedin'] = platformsMap['linkedin'].toString();
       request.fields['pinterest'] = platformsMap['pinterest'].toString();
       request.fields['twitter'] = platformsMap['twitter'].toString();
 
