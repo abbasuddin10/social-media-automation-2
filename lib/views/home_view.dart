@@ -2,45 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:social_media_automation/views/ai_video_view.dart';
-import 'package:social_media_automation/views/automation_view.dart';
-import 'package:social_media_automation/views/instant_post_view.dart';
+import 'package:social_media_automation/controllers/home_controller.dart';
 import 'package:social_media_automation/views/profile_view.dart';
-import 'package:social_media_automation/views/templates_view.dart'; // 🎯 নতুন ইম্পোর্ট
+import 'package:social_media_automation/widgets/smart_navigation_drawer.dart';
 import 'auth_view.dart';
-
-// 🎯 Instant ট্যাবের জন্য প্লেসহোল্ডার ভিউ
-class InstantView extends StatelessWidget {
-  const InstantView({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text(
-          'Instant Page',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-}
-
-class HomeController extends GetxController {
-  var currentIndex = 0.obs;
-
-  final List<Widget> pages = [
-    const HomeDashboardContent(),
-    const AiVideoView(),
-    const InstantPostView(), // 🎯 ঠিক মাঝামাঝি যুক্ত করা Instant ভিউ (Index 2)
-    AutomationView(),
-    const TemplatesView(), // 🎯 প্রোফাইলের জায়গায় নতুন টেমপ্লেট ভিউ
-  ];
-
-  void changeTab(int index) {
-    currentIndex.value = index;
-  }
-}
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -52,7 +17,7 @@ class HomeView extends StatelessWidget {
     return Scaffold(
       body: Obx(() => controller.pages[controller.currentIndex.value]),
 
-      // Bottom Navigation Bar with 5 Buttons
+      // Bottom Navigation Bar (মূল লজিক অপরিবর্তিত)
       bottomNavigationBar: Obx(
         () => BottomNavigationBar(
           currentIndex: controller.currentIndex.value,
@@ -62,18 +27,15 @@ class HomeView extends StatelessWidget {
           unselectedItemColor: Colors.grey,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_rounded),
+              icon: Icon(Icons.home_rounded),
               label: 'Dashboard',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.connect_without_contact_rounded),
-              label:
-                  'ai video', // 🎯 ai posts এর জায়গায় ai video আপডেট করা হয়েছে
+              label: 'ai video',
             ),
             BottomNavigationBarItem(
-              icon: Icon(
-                Icons.flash_on_rounded,
-              ), // 🎯 ঠিক মাঝামাঝি Instant ট্যাব যুক্ত করা হয়েছে
+              icon: Icon(Icons.flash_on_rounded),
               label: 'instant',
             ),
             BottomNavigationBarItem(
@@ -81,7 +43,7 @@ class HomeView extends StatelessWidget {
               label: 'Automation',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view_rounded), // 🎯 টেমপ্লেটের নতুন আইকন
+              icon: Icon(Icons.grid_view_rounded),
               label: 'Templates',
             ),
           ],
@@ -103,41 +65,33 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
   int _activeSlideIndex = 0;
   Timer? _autoSlideTimer;
 
-  // 5 Sliding Design Templates (Ready to Post)
-  final List<Map<String, String>> _slideDesigns = [
+  // 🎯 সার্ভিস প্রমোশন ও ফিচার স্লাইড ডাটা
+  final List<Map<String, String>> _adBanners = [
     {
-      'title': 'Discount Offer Post',
-      'subtitle': 'Special 20% discount on all products!',
+      'title': 'Social Media Manager',
+      'subtitle': 'Need an expert to handle your page & increase sales?',
+      'buttonText': 'Explore Service',
       'imageColor': '0xFF6C63FF',
     },
     {
-      'title': 'New Video Alert',
-      'subtitle': 'Check out our new tutorial on YouTube.',
+      'title': 'Video & Reels Editor',
+      'subtitle': 'Professional editing for high-converting ads & reels.',
+      'buttonText': 'See Samples',
       'imageColor': '0xFFFF6584',
     },
     {
-      'title': 'Festive Greetings',
-      'subtitle': 'Warm wishes to everyone on this occasion!',
+      'title': 'Full Marketing Automation',
+      'subtitle': 'Get auto-reply, orders & page management combined!',
+      'buttonText': 'Get Started',
       'imageColor': '0xFF4361EE',
-    },
-    {
-      'title': 'Daily Motivation',
-      'subtitle': 'Make today count and achieve your goals.',
-      'imageColor': '0xFF2EC4B6',
-    },
-    {
-      'title': 'Product Showcase',
-      'subtitle': 'Explore our best professional services.',
-      'imageColor': '0xFFFF9F1C',
     },
   ];
 
   @override
   void initState() {
     super.initState();
-    // অটো স্লাইড টাইমার সেটআপ (প্রতি ৪ সেকেন্ড পরপর স্লাইড চেঞ্জ হবে)
     _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (_activeSlideIndex < _slideDesigns.length - 1) {
+      if (_activeSlideIndex < _adBanners.length - 1) {
         _activeSlideIndex++;
       } else {
         _activeSlideIndex = 0;
@@ -166,12 +120,11 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
     Get.offAll(() => const AuthView());
   }
 
-  // Direct Post Function
-  void _postDesign(String designTitle) {
+  void _handleBannerClick(String title) {
     Get.snackbar(
-      'Success',
-      "'$designTitle' successfully posted to social media!",
-      backgroundColor: Colors.green,
+      'Service Selected',
+      'Requesting details for: $title',
+      backgroundColor: Colors.deepPurple,
       colorText: Colors.white,
       snackPosition: SnackPosition.BOTTOM,
     );
@@ -181,11 +134,38 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Social Automation'),
+        title: const Text('Afraz Automation'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          // ১. নোটিফিকেশন আইকন (প্রফাইলের বামে)
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined, size: 26),
+                onPressed: () {
+                  // নোটিফিকেশন পেইজে যাওয়ার লজিক
+                },
+              ),
+              // নোটিফিকেশন লাল ডট/ব্যাজ
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: const BoxDecoration(
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // ২. প্রফাইল আইকন
           IconButton(
             icon: const CircleAvatar(
               radius: 16,
@@ -201,79 +181,37 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
           ),
         ],
       ),
-
-      // Drawer Menu
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const UserAccountsDrawerHeader(
-              accountName: Text(
-                'Automation User',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              accountEmail: Text('user@example.com'),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40, color: Colors.deepPurple),
-              ),
-              decoration: BoxDecoration(color: Colors.deepPurple),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Colors.deepPurple),
-              title: const Text('Home'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings, color: Colors.grey),
-              title: const Text('Settings'),
-              onTap: () => Navigator.pop(context),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Logout', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _logout();
-              },
-            ),
-          ],
-        ),
-      ),
-
+      // Drawer Menu (মূল লজিক অপরিবর্তিত)
+      drawer: const SmartNavigationDrawer(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Ready-made Design Templates (Auto-sliding Banner)
-            const Text(
-              'Ready-Made Design Templates',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
+            //const SizedBox(height: 10),
+
+            // 🎯 RenderFlex Error রোধে স্লাইডারের পর্যাপ্ত হাইট দেওয়া হলো
             SizedBox(
-              height: 160,
+              height: 175,
               child: PageView.builder(
                 controller: _pageController,
-                itemCount: _slideDesigns.length,
+                itemCount: _adBanners.length,
                 onPageChanged: (index) {
                   setState(() {
                     _activeSlideIndex = index;
                   });
                 },
                 itemBuilder: (context, index) {
-                  final design = _slideDesigns[index];
+                  final ad = _adBanners[index];
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 4),
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Color(int.parse(design['imageColor']!)),
+                      color: Color(int.parse(ad['imageColor']!)),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
+                          color: Colors.grey.withOpacity(0.15),
                           blurRadius: 8,
                           spreadRadius: 2,
                         ),
@@ -281,33 +219,38 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          design['title']!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              ad['title']!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              ad['subtitle']!,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          design['subtitle']!,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 12),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: Colors.deepPurple,
+                            minimumSize: const Size(100, 34),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -316,10 +259,10 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
                               vertical: 6,
                             ),
                           ),
-                          onPressed: () => _postDesign(design['title']!),
-                          child: const Text(
-                            'Post Now',
-                            style: TextStyle(
+                          onPressed: () => _handleBannerClick(ad['title']!),
+                          child: Text(
+                            ad['buttonText']!,
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -331,56 +274,75 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
                 },
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             // Slide Dot Indicator
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(_slideDesigns.length, (index) {
+              children: List.generate(_adBanners.length, (index) {
                 return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
                   width: _activeSlideIndex == index ? 12 : 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(4),
                     color: _activeSlideIndex == index
                         ? Colors.deepPurple
-                        : Colors.grey.shade400,
+                        : Colors.grey.shade300,
                   ),
                 );
               }),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // 2. Overview Section
+            // 🎯 ২. কুইক ওভারভিউ শর্টকাট
             const Text(
-              'Overview',
+              'Quick Overview',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Row(
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 2.2,
               children: [
-                Expanded(
-                  child: _buildStatCard(
-                    title: 'Connected Accounts',
-                    value: '4',
-                    icon: Icons.link,
-                    color: Colors.blue,
-                  ),
+                _buildShortcutTile(
+                  title: 'Orders',
+                  count: '12 Today',
+                  icon: Icons.shopping_bag,
+                  color: Colors.blue,
+                  onTap: () => Get.snackbar('Orders', 'Navigating to Orders'),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    title: 'Active Automations',
-                    value: '2',
-                    icon: Icons.smart_toy,
-                    color: Colors.orange,
-                  ),
+                _buildShortcutTile(
+                  title: 'Messages',
+                  count: '28 New',
+                  icon: Icons.forum,
+                  color: Colors.green,
+                  onTap: () =>
+                      Get.snackbar('Messages', 'Navigating to Messages'),
+                ),
+                _buildShortcutTile(
+                  title: 'Likes & Comments',
+                  count: '145 Total',
+                  icon: Icons.thumb_up_alt,
+                  color: Colors.orange,
+                  onTap: () => Get.snackbar('Interactions', 'Showing Activity'),
+                ),
+                _buildShortcutTile(
+                  title: 'Pending Leads',
+                  count: '5 Action Req.',
+                  icon: Icons.hourglass_top_rounded,
+                  color: Colors.redAccent,
+                  onTap: () =>
+                      Get.snackbar('Pending', 'Navigating to Pending Leads'),
                 ),
               ],
             ),
             const SizedBox(height: 24),
 
-            // 3. Business Performance & Post Statistics
+            // 🎯 ৩. সোশাল মিডিয়া পোস্ট পারফরম্যান্স স্ট্যাটিস্টিক্স
             const Text(
               'Business Performance & Post Stats',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -404,28 +366,28 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
                   _buildPerformanceRow(
                     platform: 'Facebook Page',
                     dailyPosts: '3 Posts',
-                    monthlyPosts: '85 Posts',
-                    statusColor: Colors.blue,
+                    monthlyPosts: '85 Posts (30 Days)',
+                    statusColor: const Color(0xFF1877F2),
                   ),
                   const Divider(height: 24),
                   _buildPerformanceRow(
                     platform: 'Instagram Business',
                     dailyPosts: '2 Posts',
-                    monthlyPosts: '60 Posts',
+                    monthlyPosts: '60 Posts (30 Days)',
                     statusColor: Colors.pink,
                   ),
                   const Divider(height: 24),
                   _buildPerformanceRow(
                     platform: 'YouTube Channel',
                     dailyPosts: '1 Video',
-                    monthlyPosts: '12 Videos',
+                    monthlyPosts: '12 Videos (30 Days)',
                     statusColor: Colors.red,
                   ),
                   const Divider(height: 24),
                   _buildPerformanceRow(
                     platform: 'TikTok Profile',
                     dailyPosts: '4 Videos',
-                    monthlyPosts: '95 Videos',
+                    monthlyPosts: '95 Videos (30 Days)',
                     statusColor: Colors.black,
                   ),
                 ],
@@ -437,66 +399,77 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
     );
   }
 
-  // Stat Card Widget
-  Widget _buildStatCard({
+  // Shortcut Tile Builder
+  Widget _buildShortcutTile({
     required String title,
-    required String value,
+    required String count,
     required IconData icon,
     required Color color,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 8,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              blurRadius: 6,
+              spreadRadius: 1,
             ),
-            child: Icon(icon, color: color, size: 26),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    count,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // Performance Row Widget
+  // Performance Row Builder
   Widget _buildPerformanceRow({
     required String platform,
     required String dailyPosts,
@@ -546,7 +519,7 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
             ),
             const SizedBox(height: 2),
             Text(
-              'Monthly: $monthlyPosts',
+              monthlyPosts,
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],

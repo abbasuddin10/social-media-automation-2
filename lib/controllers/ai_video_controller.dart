@@ -10,7 +10,6 @@ class AiVideoController extends GetxController {
   final AccountsViewController accountsCtrl =
       Get.find<AccountsViewController>();
 
-  // 🔑 AuthController থেকে JWT Token পাওয়ার Getter
   String? get userToken {
     if (Get.isRegistered<AuthController>()) {
       return Get.find<AuthController>().token.value;
@@ -18,12 +17,12 @@ class AiVideoController extends GetxController {
     return null;
   }
 
-  // Input Mode: 0 = Custom Media, 1 = AI Mode
+  // Input Mode: 0 = Custom Video, 1 = AI Generator
   var inputMode = 0.obs;
 
   // Media & AI Fields
   var selectedVideoPath = ''.obs;
-  var selectedThumbnailPath = ''.obs; // 🎯 YouTube Thumbnail Path
+  var selectedThumbnailPath = ''.obs;
   final promptController = TextEditingController();
   final captionController = TextEditingController();
   final twitterCaptionController = TextEditingController();
@@ -50,7 +49,6 @@ class AiVideoController extends GetxController {
   var isGeneratingAi = false.obs;
   var isSubmitting = false.obs;
 
-  // 🎯 Smart Validation Check
   bool get canPost {
     bool hasPlatform =
         postToFacebook.value ||
@@ -60,7 +58,6 @@ class AiVideoController extends GetxController {
         postToTwitter.value ||
         postToYoutube.value;
 
-    // AI Mode (1) হলে ভিডিও বাধ্যতামূলক নয়, Custom Video (0) হলে বাধ্যতামূলক
     bool validMedia =
         inputMode.value == 1 || selectedVideoPath.value.isNotEmpty;
 
@@ -71,7 +68,6 @@ class AiVideoController extends GetxController {
     return hasPlatform && validMedia && validSchedule;
   }
 
-  // Pick Video File
   Future<void> pickVideo() async {
     picker.FilePickerResult? result = await picker.FilePicker.pickFiles(
       type: picker.FileType.video,
@@ -82,12 +78,10 @@ class AiVideoController extends GetxController {
     }
   }
 
-  // Clear Selected Video
   void removeVideo() {
     selectedVideoPath.value = '';
   }
 
-  // 🎯 Pick Thumbnail File
   Future<void> pickThumbnail() async {
     picker.FilePickerResult? result = await picker.FilePicker.pickFiles(
       type: picker.FileType.image,
@@ -98,12 +92,11 @@ class AiVideoController extends GetxController {
     }
   }
 
-  // 🎯 Clear Selected Thumbnail
   void removeThumbnail() {
     selectedThumbnailPath.value = '';
   }
 
-  // 🤖 AI Content Generator (Caption + Twitter + YouTube)
+  // 🤖 AI Content & Video Generator
   Future<Map<String, String>?> generateAiContent() async {
     String promptText = promptController.text.trim();
     if (promptText.isEmpty) {
@@ -119,8 +112,11 @@ class AiVideoController extends GetxController {
 
     try {
       isGeneratingAi.value = true;
-      const String backendUrl =
-          'https://social-backend-1hwz.onrender.com/api/generate-caption';
+
+      // Tab 0 (Custom Video) হলে শুধু ক্যাপশন এন্ডপয়েন্ট, Tab 1 (AI Generator) হলে ভিডিও+ক্যাপশন এন্ডপয়েন্ট
+      final String backendUrl = inputMode.value == 1
+          ? 'https://social-backend-1hwz.onrender.com/api/generate-video-content'
+          : 'https://social-backend-1hwz.onrender.com/api/generate-caption';
 
       final response = await http.post(
         Uri.parse(backendUrl),
@@ -137,13 +133,17 @@ class AiVideoController extends GetxController {
         if (resData['success'] == true && resData['data'] != null) {
           var aiData = resData['data'];
 
+          // AI Generator (Tab 1) মোডে জেনারেট হওয়া ভিডিও ইউআরএল/পাথ সেট করা
+          if (inputMode.value == 1 && aiData['video_url'] != null) {
+            selectedVideoPath.value = aiData['video_url'];
+          }
+
           String caption = aiData['caption'] ?? '';
           String tweet = aiData['twitter_caption'] ?? caption;
           String ytTitle = aiData['youtube_title'] ?? promptText;
           String ytDesc = aiData['youtube_description'] ?? caption;
           String ytTags = aiData['youtube_tags'] ?? '';
 
-          // কন্ট্রোলারে ডাইনামিক ফিল-আপ
           twitterCaptionController.text = tweet;
           youtubeTitleController.text = ytTitle;
           youtubeDescController.text = ytDesc;
@@ -166,7 +166,6 @@ class AiVideoController extends GetxController {
     return null;
   }
 
-  // Select All Platforms
   void toggleSelectAll(bool val) {
     if (accountsCtrl.isFacebookConnected.value) postToFacebook.value = val;
     if (accountsCtrl.isInstagramConnected.value) postToInstagram.value = val;
@@ -176,10 +175,9 @@ class AiVideoController extends GetxController {
     if (accountsCtrl.isYoutubeConnected.value) postToYoutube.value = val;
   }
 
-  // Reset Form
   void clearForm() {
     selectedVideoPath.value = '';
-    selectedThumbnailPath.value = ''; // 🎯 Clear Thumbnail
+    selectedThumbnailPath.value = '';
     promptController.clear();
     captionController.clear();
     twitterCaptionController.clear();
@@ -191,7 +189,6 @@ class AiVideoController extends GetxController {
     scheduledDateTime.value = null;
   }
 
-  // 🎯 Submit Post Method
   Future<void> submitPost() async {
     if (!canPost) return;
 
@@ -201,19 +198,23 @@ class AiVideoController extends GetxController {
           'https://social-backend-1hwz.onrender.com/api/save-post';
       var request = http.MultipartRequest('POST', Uri.parse(url));
 
-      // 🔐 Auth Token Header
       if (userToken != null && userToken!.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $userToken';
       }
 
-      // 📁 Video File Attachment
       if (selectedVideoPath.value.isNotEmpty) {
-        request.files.add(
-          await http.MultipartFile.fromPath('images', selectedVideoPath.value),
-        );
+        if (selectedVideoPath.value.startsWith('http')) {
+          request.fields['video_url'] = selectedVideoPath.value;
+        } else {
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'images',
+              selectedVideoPath.value,
+            ),
+          );
+        }
       }
 
-      // 🖼️ YouTube Thumbnail Attachment
       if (selectedThumbnailPath.value.isNotEmpty) {
         request.files.add(
           await http.MultipartFile.fromPath(
@@ -223,29 +224,24 @@ class AiVideoController extends GetxController {
         );
       }
 
-      // 🎯 ১. MODE পাস করুন
       if (isScheduled.value) {
         request.fields['mode'] = 'schedule';
       } else {
         request.fields['mode'] = inputMode.value == 1 ? 'ai_agent' : 'manual';
       }
 
-      // 🎯 ২. SCHEDULE TIME পাস করুন
       if (isScheduled.value && scheduledDateTime.value != null) {
         request.fields['schedule_time'] = scheduledDateTime.value!
             .toIso8601String();
       }
 
-      // 🎯 ৩. Text Contents
       request.fields['content'] = captionController.text.trim();
       request.fields['twitter_caption'] = twitterCaptionController.text.trim();
       request.fields['youtube_title'] = youtubeTitleController.text.trim();
       request.fields['youtube_description'] = youtubeDescController.text.trim();
       request.fields['youtube_tags'] = youtubeTagsController.text.trim();
-      request.fields['youtube_privacy'] =
-          youtubePrivacy.value; // 🎯 Privacy Pass
+      request.fields['youtube_privacy'] = youtubePrivacy.value;
 
-      // 🎯 ৪. Platforms
       request.fields['facebook'] = postToFacebook.value.toString();
       request.fields['instagram'] = postToInstagram.value.toString();
       request.fields['pinterest'] = postToPinterest.value.toString();
@@ -253,7 +249,6 @@ class AiVideoController extends GetxController {
       request.fields['twitter'] = postToTwitter.value.toString();
       request.fields['youtube'] = postToYoutube.value.toString();
 
-      // 🚀 Send Request
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 

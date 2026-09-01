@@ -12,7 +12,7 @@ class AccountsView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('সোশ্যাল অ্যাকাউন্টস'),
+        title: const Text('সোশ্যাল অ্যাকাউন্টস ও স্টোর'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -26,7 +26,7 @@ class AccountsView extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         children: [
           const Text(
-            'আপনার সোশ্যাল মিডিয়া ও মেসেজিং অ্যাকাউন্টগুলো ম্যানেজ করুন',
+            'আপনার সোশ্যাল মিডিয়া, মেসেজিং ও ই-কমার্স অ্যাকাউন্ট ম্যানেজ করুন',
             style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
           const SizedBox(height: 20),
@@ -94,16 +94,24 @@ class AccountsView extends StatelessWidget {
             ),
           ),
 
-          // ৪. টিকটক অ্যাকাউন্ট কার্ড
+          // ৪. ওয়েবসাইট / ই-কমার্স স্টোর (TikTok সরিয়ে ওয়েবসাইট যুক্ত করা হলো)
           Obx(
             () => _buildAccountCard(
-              platformName: 'TikTok Profile',
-              icon: Icons.music_note,
-              iconColor: Colors.black,
-              isConnected: controller.isTiktokConnected.value,
-              onConnect: () => controller.toggleConnection('tiktok', true),
-              onDisconnect: () =>
-                  controller.confirmDisconnect('tiktok', 'TikTok Profile'),
+              platformName:
+                  controller.isWebsiteConnected.value &&
+                      controller.websiteName.value.isNotEmpty
+                  ? controller.websiteName.value
+                  : 'Website Store',
+              icon: Icons.language,
+              iconColor: Colors.deepPurple,
+              isConnected: controller.isWebsiteConnected.value,
+              onConnect: controller.showWebsiteConnectDialog,
+              onDisconnect: () => controller.confirmDisconnect(
+                'website',
+                controller.websiteName.value.isNotEmpty
+                    ? controller.websiteName.value
+                    : 'Website Store',
+              ),
             ),
           ),
 

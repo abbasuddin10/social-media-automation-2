@@ -25,7 +25,6 @@ class _AiVideoViewState extends State<AiVideoView> {
     controller = Get.put(AiVideoController());
   }
 
-  // 🎯 টাইপিং অ্যানিমেশন
   void _startTypingAnimation(String fullText) {
     _typingTimer?.cancel();
     controller.captionController.clear();
@@ -44,7 +43,6 @@ class _AiVideoViewState extends State<AiVideoView> {
     });
   }
 
-  // 🎯 জেনারেট বাটন অ্যাকশন
   Future<void> _handleGenerateCaption() async {
     FocusScope.of(context).unfocus();
     final result = await controller.generateAiContent();
@@ -114,7 +112,7 @@ class _AiVideoViewState extends State<AiVideoView> {
             ),
             const SizedBox(height: 20),
 
-            // 🎯 ২. কাস্টম ভিডিও ফাইল সিলেক্টর
+            // 🎯 ২. কাস্টম ভিডিও ফাইল সিলেক্টর (Tab 0) / AI Generated Video Preview (Tab 1)
             Obx(() {
               if (controller.inputMode.value == 0) {
                 return Column(
@@ -229,6 +227,41 @@ class _AiVideoViewState extends State<AiVideoView> {
                     const SizedBox(height: 20),
                   ],
                 );
+              } else if (controller.inputMode.value == 1 &&
+                  controller.selectedVideoPath.value.isNotEmpty) {
+                // AI Video Preview Card
+                return Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.indigo.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.video_file, color: Colors.indigo),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'AI Video Generated Successfully!',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.indigo,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.red),
+                            onPressed: controller.removeVideo,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                );
               }
               return const SizedBox.shrink();
             }),
@@ -293,8 +326,20 @@ class _AiVideoViewState extends State<AiVideoView> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Obx(
-                    () => SizedBox(
+                  Obx(() {
+                    // 🎯 ট্যাবের উপর ভিত্তি করে ডায়নামিক বাটন টেক্সট
+                    String buttonText = 'Generate Caption';
+                    if (controller.inputMode.value == 1) {
+                      buttonText = 'Generate Video & Content';
+                    }
+
+                    if (controller.isGeneratingAi.value) {
+                      buttonText = controller.inputMode.value == 1
+                          ? 'Generating Video & Captions...'
+                          : 'Generating Caption...';
+                    }
+
+                    return SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
@@ -320,19 +365,15 @@ class _AiVideoViewState extends State<AiVideoView> {
                               )
                             : const Icon(Icons.flash_on_rounded, size: 20),
                         label: Text(
-                          controller.isGeneratingAi.value
-                              ? 'Generating Content...'
-                              : (controller.captionController.text.isEmpty
-                                    ? 'Generate Content'
-                                    : 'Regenerate Content'),
+                          buttonText,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  }),
                 ],
               ),
             ),
@@ -447,7 +488,6 @@ class _AiVideoViewState extends State<AiVideoView> {
                   padding: const EdgeInsets.only(top: 16.0),
                   child: Column(
                     children: [
-                      // ইউটিউব থাম্বনেল অপশনাল আপলোডার
                       _buildCardWrapper(
                         title: 'YouTube Custom Thumbnail',
                         accentColor: Colors.redAccent,
@@ -528,7 +568,6 @@ class _AiVideoViewState extends State<AiVideoView> {
                         }),
                       ),
                       const SizedBox(height: 16),
-                      // মূল ইউটিউব ফর্ম
                       YoutubeMetadataForm(controller: controller),
                     ],
                   ),
@@ -554,7 +593,6 @@ class _AiVideoViewState extends State<AiVideoView> {
     );
   }
 
-  // Helper Widget: কাস্টম টগল বাটন
   Widget _buildTabButton({
     required String title,
     required IconData icon,
@@ -603,7 +641,6 @@ class _AiVideoViewState extends State<AiVideoView> {
     );
   }
 
-  // Helper Widget: ক্লিন কার্ড র‍্যাপার
   Widget _buildCardWrapper({
     required String title,
     required Widget child,
