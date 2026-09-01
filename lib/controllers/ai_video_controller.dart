@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart' as picker;
 import 'package:http/http.dart' as http;
-import '../models/post_model.dart';
 import 'accounts_view_controller.dart';
 import 'auth_controller.dart';
 

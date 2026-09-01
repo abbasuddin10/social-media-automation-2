@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_media_automation/views/ai_video_view.dart';
-import 'package:social_media_automation/views/automation_agent_view.dart';
 import 'package:social_media_automation/views/automation_view.dart';
 import 'package:social_media_automation/views/instant_post_view.dart';
 import 'package:social_media_automation/views/profile_view.dart';
